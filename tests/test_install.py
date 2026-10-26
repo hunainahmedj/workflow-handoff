@@ -21,6 +21,12 @@ class InstallTests(unittest.TestCase):
                 installer.install(dest)
             self.assertEqual((dest / "SKILL.md").read_text(), "local customisation")
 
+    def test_refuses_recursive_destination(self):
+        destination = ROOT / "skills/workflow-handoff/nested-install"
+        with self.assertRaises(ValueError):
+            installer.install(destination)
+        self.assertFalse(destination.exists())
+
     def test_refuses_dangling_symlink(self):
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "workflow-handoff"

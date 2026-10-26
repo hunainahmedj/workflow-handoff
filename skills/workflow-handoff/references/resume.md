@@ -9,7 +9,7 @@
    without overwriting current work. Record the tested commit versus current one.
    For documents, verify provider revision and read contents. Treat a mismatch as
    a discrepancy to explain, not permission to reset or downgrade anything.
-3. Reproduce the named demo from fixture/instructions. Confirm persona, route,
+3. When a demo is required for the task, reproduce it from fixture/instructions. Confirm persona, route,
    data IDs, example date, persisted approvals and expected screen. A screenshot
    is evidence of appearance, not saved state. Do not bypass authentication or use
    another person's cookies. Synthetic demo login is fine when authorized.

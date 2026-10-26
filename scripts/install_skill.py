@@ -8,6 +8,9 @@ import shutil
 def install(destination):
     source = Path(__file__).resolve().parents[1] / "skills" / "workflow-handoff"
     destination = Path(destination).expanduser()
+    resolved = destination.resolve()
+    if resolved == source.resolve() or source.resolve() in resolved.parents:
+        raise ValueError("Destination must be outside the source skill directory.")
     if destination.exists() or destination.is_symlink():
         raise FileExistsError(f"Refusing to overwrite {destination}; preserve local changes before updating.")
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -24,7 +27,7 @@ def main():
     dest = args.destination or Path.home() / root / "skills" / "workflow-handoff"
     try:
         installed = install(dest)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         parser.exit(1, str(exc) + "\n")
     print(f"Installed workflow-handoff at {installed}")
     print("Open a new host session if the skill is not discovered immediately.")

@@ -35,7 +35,7 @@ Suggested message (substitute verified values):
 > Example: <shared preview / fixture instructions>
 > Checked: <results and limits>
 > Next: <one concrete action>
-> Owner remains <author> until <recipient> accepts.
+> Current owner: <verified owner>; this update does not reset existing ownership.
 
 If there is no shared packet host, attach the non-sensitive packet through a
 supported upload tool when authorized. Do not paste a local filesystem path and
@@ -43,6 +43,11 @@ claim the recipient can open it. Readiness still requires shared work artifacts.
 An immutable Slack packet attachment can be the exchange record; Git remains the
 source for code. If upload is unavailable, provide a downloadable packet and exact
 message for the human to post manually; mark not sent.
+
+For an optional supplement, say that an already-working recipient may ignore it or
+reconcile useful context with their actual base. Do not tell them to restart, overwrite
+their branch or accept again. A substantive changed policy is a discrepancy to resolve,
+not something to hide behind an optional-update label.
 
 ## Accept / hand back
 

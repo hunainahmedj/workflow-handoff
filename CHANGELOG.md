@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 — 2026-10-26
+
+- Shorten the entry prompt and load only mode-specific guidance.
+- Preserve active ownership when receiving optional context supplements.
+- Validate draft metadata, UUID identity and malformed/local-only artifact URLs.
+- Refuse recursive installation inside the skill source directory.
+- Add package consistency checks to CI and regressions for the corrected cases.
+
 ## 0.5.0 — 2026-10-26
 
 - First public package: portable skill and Claude Code marketplace/plugin manifests.

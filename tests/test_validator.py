@@ -1,6 +1,5 @@
 import importlib.util
 from pathlib import Path
-import copy
 import unittest
 from uuid import uuid4
 
@@ -37,5 +36,44 @@ class Checks(unittest.TestCase):
         p=base();p['brief']['url']='https://user:secret@example.org/x';self.assertTrue(v.validate(p))
     def test_code_requires_repo(self):
         p=base();p['scope']='prototype';self.assertTrue(v.validate(p))
+
+class MalformedPacketTests(unittest.TestCase):
+    def test_rejects_malformed_or_local_urls(self):
+        for url in ("https://localhost./x", "https://127.0.0.2/x", "https://[::1]/x",
+                    "https://0.0.0.0/x", "https://127.1/x", "https://2130706433/x",
+                    "https://bad host/x", "https://example.org:bad/x", "https://example.org:0/x",
+                    "https://example.org:99999/x", "https://@example.org/x", "https://example..org/x"):
+            with self.subTest(url=url):
+                p = base(); p['brief']['url'] = url
+                self.assertTrue(v.validate(p))
+
+    def test_shared_internal_hosts_remain_allowed(self):
+        for url in ("https://docs.example.org:8443/x", "https://10.0.0.5/x", "https://docs.corp/x"):
+            self.assertTrue(v.shared_url(url))
+
+    def test_draft_metadata_is_still_typed(self):
+        for field, value in (("accessible_verified", "false"), ("version", {"revision": 1})):
+            p = base(); p['ready_for_resume'] = False; p['state'] = 'draft'
+            p['brief'][field] = value
+            self.assertTrue(v.validate(p))
+
+    def test_boolean_is_not_schema_version(self):
+        p = base(); p['schema_version'] = True
+        self.assertTrue(v.validate(p))
+
+    def test_artifact_name_is_nonempty_text(self):
+        for name in (' ', {'name': 'fixture'}):
+            p = base(); p['artifacts'] = [dict(name=name, url='https://example.org/x', accessible_verified=True)]
+            self.assertTrue(v.validate(p))
+
+    def test_uuid_case_cannot_hide_self_reference(self):
+        p = base(); p['supersedes'] = p['packet_id'].upper()
+        self.assertTrue(v.validate(p))
+
+    def test_unshared_brief_needs_blocker_even_with_repo(self):
+        p = base(); p.update(state='draft', ready_for_resume=False)
+        p['brief'] = dict(url=None, version=None, accessible_verified=False)
+        p['repositories'] = [dict(url='https://example.org/repo', branch='main', commit='a'*40, dirty=False, published_verified=True)]
+        self.assertTrue(v.validate(p))
 
 if __name__=='__main__': unittest.main()

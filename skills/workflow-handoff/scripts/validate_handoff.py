@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime
 import json
+import ipaddress
 from pathlib import Path
 import re
 from urllib.parse import urlparse
@@ -10,14 +11,30 @@ from uuid import UUID
 
 
 def shared_url(value):
-    if not isinstance(value, str):
+    """Check URL syntax and obvious local-only hosts, without DNS or network access."""
+    if not isinstance(value, str) or re.search(r"[\s\x00-\x1f\x7f\\]", value):
         return False
     try:
         u = urlparse(value)
-        host = (u.hostname or '').lower()
-        return (u.scheme == 'https' and bool(host) and not u.username and not u.password
-                and host not in ('localhost', '127.0.0.1', '::1') and not host.endswith('.localhost'))
-    except ValueError:
+        host = (u.hostname or '').lower().rstrip('.')
+        port = u.port  # Access validates numeric/range syntax.
+        if (u.scheme != 'https' or not host or u.username is not None
+                or u.password is not None or u.netloc.endswith(':') or port == 0
+                or host == 'localhost' or host.endswith('.localhost')):
+            return False
+        try:
+            address = ipaddress.ip_address(host)
+            mapped = getattr(address, 'ipv4_mapped', None)
+            address = mapped or address
+            return not (address.is_loopback or address.is_unspecified or address.is_link_local)
+        except ValueError:
+            # Reject ambiguous numeric host forms such as 127.1 or integer IPv4.
+            if re.fullmatch(r'[0-9.]+', host):
+                return False
+            labels = host.encode('idna').decode('ascii').split('.')
+            return all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label)
+                       for label in labels)
+    except (ValueError, UnicodeError):
         return False
 
 
@@ -28,7 +45,7 @@ def validate(p, require_ready=False):
             errors.append(msg)
     if not isinstance(p, dict):
         return ['Packet must be a JSON object']
-    check(p.get('schema_version') == 1, 'Unsupported schema_version')
+    check(type(p.get('schema_version')) is int and p.get('schema_version') == 1, 'Unsupported schema_version')
     for k in ('title', 'objective', 'author', 'recipient', 'current_owner', 'harness'):
         check(isinstance(p.get(k), str) and bool(p[k].strip()), f'{k} is required')
     check(isinstance(p.get('workflow_id'), str) and bool(re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', p['workflow_id'])), 'workflow_id must be a slug')
@@ -39,7 +56,11 @@ def validate(p, require_ready=False):
             UUID(p.get(k, ''))
         except (ValueError, TypeError, AttributeError):
             errors.append(f'{k} must be a UUID')
-    check(p.get('packet_id') != p.get('supersedes'), 'Packet cannot supersede itself')
+    try:
+        if p.get('supersedes') is not None:
+            check(UUID(p['packet_id']) != UUID(p['supersedes']), 'Packet cannot supersede itself')
+    except (ValueError, TypeError, AttributeError, KeyError):
+        pass  # Invalid IDs already have field-specific errors above.
     try:
         d = datetime.fromisoformat(p.get('created_at', '').replace('Z', '+00:00'))
         check(d.tzinfo is not None, 'created_at needs timezone')
@@ -58,6 +79,8 @@ def validate(p, require_ready=False):
     if not isinstance(brief, dict):
         errors.append('brief must be an object')
         brief = {}
+    check(type(brief.get('accessible_verified')) is bool, 'brief.accessible_verified must be boolean')
+    check(brief.get('version') is None or (isinstance(brief['version'], str) and bool(brief['version'].strip())), 'brief.version must be nonempty text or null')
     if brief.get('url') is not None:
         check(shared_url(brief['url']), 'brief.url must be a shared HTTPS URL without credentials')
     repos = p.get('repositories')
@@ -82,7 +105,7 @@ def validate(p, require_ready=False):
         if not isinstance(a, dict):
             errors.append(f'artifacts[{i}] must be an object')
             continue
-        check(bool(a.get('name')) and shared_url(a.get('url')), f'artifacts[{i}] needs name and shared HTTPS URL')
+        check(isinstance(a.get('name'), str) and bool(a['name'].strip()) and shared_url(a.get('url')), f'artifacts[{i}] needs name and shared HTTPS URL')
         check(type(a.get('accessible_verified')) is bool, f'artifacts[{i}].accessible_verified must be boolean')
         if ready:
             check(a.get('accessible_verified') is True, f'artifacts[{i}] access is unverified')
@@ -110,7 +133,7 @@ def validate(p, require_ready=False):
         check(demo.get('mode') != 'browser-only', 'Browser-only state is not reproducible')
         if p.get('scope') in ('prototype', 'backend', 'frontend', 'mixed'):
             check(bool(repos), 'Implementation handoff requires repositories')
-    elif not repos and not brief.get('url'):
+    elif not brief.get('url'):
         check(bool(p.get('blockers')), 'Unavailable shared work needs an explicit blocker')
     return errors
 
