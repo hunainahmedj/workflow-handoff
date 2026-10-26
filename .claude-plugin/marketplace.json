@@ -1,0 +1,14 @@
+{
+  "name": "workflow-handoff-marketplace",
+  "owner": {
+    "name": "hunainahmedj"
+  },
+  "plugins": [
+    {
+      "name": "workflow-handoff",
+      "source": "./",
+      "description": "Versioned handoffs across people and AI assistants."
+    }
+  ],
+  "description": "Portable workflow handoffs across people and AI assistants."
+}

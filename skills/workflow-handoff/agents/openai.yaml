@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Handoff"
+  short_description: "Exchange resumable work across Claude, Codex and Slack"
+  default_prompt: "Use $workflow-handoff to prepare or resume a shared workflow handoff."

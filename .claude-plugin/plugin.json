@@ -1,0 +1,10 @@
+{
+  "name": "workflow-handoff",
+  "version": "0.5.0",
+  "description": "Preserve context, decisions, artifact versions and ownership when handing work between people and AI assistants.",
+  "author": {
+    "name": "hunainahmedj"
+  },
+  "repository": "https://github.com/hunainahmedj/workflow-handoff",
+  "license": "MIT"
+}
